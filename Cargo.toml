@@ -1,0 +1,8 @@
+[package]
+name = "slint-spatial-focus"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+slint = "=1.9.2"
+i-slint-core = "=1.9.2"

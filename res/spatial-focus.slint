@@ -1,0 +1,60 @@
+export global SpatialFocus {
+    callback move_up();
+    callback move_dn();
+    callback move_l();
+    callback move_r();
+}
+
+export component SpatialFocusHandler inherits FocusScope {
+    enabled: false;
+
+    key-pressed(event) => {
+        if (event.text == Key.UpArrow) {
+            SpatialFocus.move_up();
+            return accept;
+        }
+        if (event.text == Key.DownArrow) {
+            SpatialFocus.move_dn();
+            return accept;
+        }
+        if (event.text == Key.LeftArrow) {
+            SpatialFocus.move_l();
+            return accept;
+        }
+        if (event.text == Key.RightArrow) {
+            SpatialFocus.move_r();
+            return accept;
+        }
+        reject
+    }
+}
+
+export component VerticalFocusGroup inherits FocusScope {
+    enabled: false;
+
+    key-pressed(event) => {
+        if (event.text == "VerticalFocusGroup") {
+            return accept;
+        }
+        reject
+    }
+
+    l := VerticalLayout {
+        @children
+    }
+}
+
+export component HorizontalFocusGroup inherits FocusScope {
+    enabled: false;
+
+    key-pressed(event) => {
+        if (event.text == "HorizontalFocusGroup") {
+            return accept;
+        }
+        reject
+    }
+
+    HorizontalLayout {
+        @children
+    }
+}
