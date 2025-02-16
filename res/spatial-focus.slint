@@ -5,7 +5,6 @@ export global SpatialFocus {
     callback move_r();
 }
 
-// Root element for catching spatial navigation events
 export component SpatialFocusHandler inherits FocusScope {
     enabled: false;
 
@@ -27,37 +26,5 @@ export component SpatialFocusHandler inherits FocusScope {
             return accept;
         }
         reject
-    }
-}
-
-// Element defining a spatial axis for its children
-export component VerticalFocusGroup inherits FocusScope {
-    enabled: false;
-
-    key-pressed(event) => {
-        if (event.text == "VerticalFocusGroup") {
-            return accept;
-        }
-        reject
-    }
-
-    l := VerticalLayout {
-        @children
-    }
-}
-
-// Element defining a spatial axis for its children
-export component HorizontalFocusGroup inherits FocusScope {
-    enabled: false;
-
-    key-pressed(event) => {
-        if (event.text == "HorizontalFocusGroup") {
-            return accept;
-        }
-        reject
-    }
-
-    HorizontalLayout {
-        @children
     }
 }

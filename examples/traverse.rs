@@ -2,7 +2,7 @@ use slint::Weak;
 use slint_spatial_focus::{SpatialAxis, SpatialDirection, SpatialFocusExtensions};
 
 slint::slint! {
-    import { SpatialFocusHandler, VerticalFocusGroup, HorizontalFocusGroup, SpatialFocus } from "res/spatial-focus.slint";
+    import { SpatialFocusHandler, SpatialFocus } from "res/spatial-focus.slint";
     export { SpatialFocus }
 
     component Item inherits Rectangle {
@@ -16,12 +16,25 @@ slint::slint! {
     export component App inherits Window {
         forward-focus: fh;
         fh := SpatialFocusHandler {
-            HorizontalFocusGroup {
-                HorizontalFocusGroup { for i in 3: Item {} }
-                VerticalFocusGroup { for i in 3: Item {} }
-                HorizontalFocusGroup { for i in 3: Item {} }
-                VerticalFocusGroup {  for i in 3: Item {} }
+            VerticalLayout {
+                HorizontalLayout {
+                    HorizontalLayout { for i in 3: Item {} }
+                    VerticalLayout { for i in 3: Item {} }
+                    HorizontalLayout { for i in 3: Item {} }
+                    VerticalLayout {  for i in 3: Item {} }
+                }
+                GridLayout {
+                    Row { Item {} Item {} }
+                    Row { Item {} Item {} }
+                }
+                HorizontalLayout {
+                    VerticalLayout { for i in 2: Item {} }
+                    HorizontalLayout { for i in 2: Item {} }
+                    VerticalLayout {  for i in 2: Item {} }
+                    HorizontalLayout { for i in 2: Item {} }
+                }
             }
+
         }
     }
 }
