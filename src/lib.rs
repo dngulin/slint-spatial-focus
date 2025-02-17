@@ -1,7 +1,7 @@
 use i_slint_core::api::Window;
 use i_slint_core::item_tree::ItemRc;
 use i_slint_core::items::{FocusScope, TextInput};
-use i_slint_core::lengths::LogicalPoint;
+use i_slint_core::lengths::LogicalRect;
 use i_slint_core::window::WindowInner;
 use i_slint_core::Coord;
 
@@ -20,7 +20,7 @@ pub enum SpatialDirection {
 struct FocusMoveCtx {
     pub axis: SpatialAxis,
     pub dir: SpatialDirection,
-    pub pos: LogicalPoint,
+    pub focused_rect: LogicalRect,
 }
 
 pub trait SpatialFocusExtensions {
@@ -33,9 +33,13 @@ impl SpatialFocusExtensions for Window {
         let focused_item = window.focus_item.try_borrow().ok()?.upgrade()?;
 
         let focus_chain = get_hierarchy_chain(&focused_item);
-        let pos = get_pos(&focused_item);
+        let focused_rect = get_rect(&focused_item);
 
-        let ctx = FocusMoveCtx { axis, dir, pos };
+        let ctx = FocusMoveCtx {
+            axis,
+            dir,
+            focused_rect,
+        };
         let mut idx = 1;
 
         while idx < focus_chain.len() {
@@ -51,8 +55,11 @@ impl SpatialFocusExtensions for Window {
     }
 }
 
-fn get_pos(item: &ItemRc) -> LogicalPoint {
-    item.map_to_window(item.geometry().center())
+fn get_rect(item: &ItemRc) -> LogicalRect {
+    let local_rect = item.geometry();
+    let global_pos = item.map_to_window(local_rect.origin);
+
+    LogicalRect::new(global_pos, local_rect.size)
 }
 
 fn is_focusable(item: &ItemRc) -> bool {
@@ -99,27 +106,29 @@ fn find_focusable_sibling_of(item: &ItemRc, ctx: &FocusMoveCtx) -> Option<ItemRc
     };
     visit_children(&parent, &mut visitor);
 
-    let candidates: Vec<(ItemRc, LogicalPoint)> = siblings
+    let candidates: Vec<(ItemRc, LogicalRect)> = siblings
         .iter()
-        .map(|i| (i.clone(), get_pos(i)))
-        .filter(|(_, p)| is_focus_target(*p, ctx))
+        .map(|i| (i.clone(), get_rect(i)))
+        .filter(|(_, r)| is_focus_target(r, ctx))
         .collect();
 
     let first = candidates.first()?;
 
     let mut curr_i = first.0.clone();
-    let mut curr_d = distance(first.1, ctx);
-    let mut curr_od = ort_distance(first.1, ctx);
+    let mut curr_d = distance(&first.1, ctx);
+    let mut curr_od = ort_distance(&first.1, ctx);
 
-    for (i, p) in &candidates[1..] {
-        let d = distance(*p, ctx);
-        let od = ort_distance(*p, ctx);
+    for (i, r) in &candidates[1..] {
+        let d = distance(r, ctx);
+        let od = ort_distance(r, ctx);
 
-        if d < curr_d {
+        if (d - curr_d).abs() <= TOLERANCE {
+            if od < curr_od {
+                curr_od = od;
+                curr_i = i.clone();
+            }
+        } else if d < curr_d {
             curr_d = d;
-            curr_od = od;
-            curr_i = i.clone();
-        } else if d == curr_d && od < curr_od {
             curr_od = od;
             curr_i = i.clone();
         }
@@ -158,28 +167,48 @@ fn visit_children<F: FnMut(&ItemRc) -> TraversalOp>(item: &ItemRc, process: &mut
     }
 }
 
-fn is_focus_target(p: LogicalPoint, ctx: &FocusMoveCtx) -> bool {
-    let (curr, target) = match ctx.axis {
-        SpatialAxis::Horizontal => (ctx.pos.x, p.x),
-        SpatialAxis::Vertical => (ctx.pos.y, p.y),
+const TOLERANCE: Coord = 0.001;
+
+fn is_focus_target(r: &LogicalRect, ctx: &FocusMoveCtx) -> bool {
+    match (ctx.axis, ctx.dir) {
+        (SpatialAxis::Horizontal, SpatialDirection::Backward) => {
+            r.origin.x + r.width() - TOLERANCE <= ctx.focused_rect.origin.x
+        }
+        (SpatialAxis::Horizontal, SpatialDirection::Forward) => {
+            r.origin.x + TOLERANCE >= ctx.focused_rect.origin.x + ctx.focused_rect.width()
+        }
+        (SpatialAxis::Vertical, SpatialDirection::Backward) => {
+            r.origin.y + r.height() - TOLERANCE <= ctx.focused_rect.origin.y
+        }
+        (SpatialAxis::Vertical, SpatialDirection::Forward) => {
+            r.origin.y + TOLERANCE >= ctx.focused_rect.origin.y + ctx.focused_rect.height()
+        }
+    }
+}
+
+fn distance(r: &LogicalRect, ctx: &FocusMoveCtx) -> Coord {
+    let d = match (ctx.axis, ctx.dir) {
+        (SpatialAxis::Horizontal, SpatialDirection::Backward) => {
+            (r.origin.x + r.width()) - ctx.focused_rect.origin.x
+        }
+        (SpatialAxis::Horizontal, SpatialDirection::Forward) => {
+            r.origin.x - (ctx.focused_rect.origin.x + ctx.focused_rect.width())
+        }
+        (SpatialAxis::Vertical, SpatialDirection::Backward) => {
+            (r.origin.y + r.height()) - ctx.focused_rect.origin.y
+        }
+        (SpatialAxis::Vertical, SpatialDirection::Forward) => {
+            r.origin.y - (ctx.focused_rect.origin.y + ctx.focused_rect.height())
+        }
     };
-    match ctx.dir {
-        SpatialDirection::Forward => target > curr,
-        SpatialDirection::Backward => target < curr,
-    }
+
+    d.abs()
 }
 
-fn distance(p: LogicalPoint, ctx: &FocusMoveCtx) -> Coord {
+fn ort_distance(r: &LogicalRect, ctx: &FocusMoveCtx) -> Coord {
     match ctx.axis {
-        SpatialAxis::Horizontal => (ctx.pos.x - p.x).abs(),
-        SpatialAxis::Vertical => (ctx.pos.y - p.y).abs(),
-    }
-}
-
-fn ort_distance(p: LogicalPoint, ctx: &FocusMoveCtx) -> Coord {
-    match ctx.axis {
-        SpatialAxis::Horizontal => (ctx.pos.y - p.y).abs(),
-        SpatialAxis::Vertical => (ctx.pos.x - p.x).abs(),
+        SpatialAxis::Horizontal => (ctx.focused_rect.center().y - r.center().y).abs(),
+        SpatialAxis::Vertical => (ctx.focused_rect.center().x - r.center().x).abs(),
     }
 }
 
