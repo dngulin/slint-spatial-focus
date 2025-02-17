@@ -207,8 +207,8 @@ fn distance(r: &LogicalRect, ctx: &FocusMoveCtx) -> Coord {
 
 fn ort_distance(r: &LogicalRect, ctx: &FocusMoveCtx) -> Coord {
     match ctx.axis {
-        SpatialAxis::Horizontal => (ctx.focused_rect.center().y - r.center().y).abs(),
-        SpatialAxis::Vertical => (ctx.focused_rect.center().x - r.center().x).abs(),
+        SpatialAxis::Horizontal => (ctx.focused_rect.origin.y - r.origin.y).abs(),
+        SpatialAxis::Vertical => (ctx.focused_rect.origin.x - r.origin.x).abs(),
     }
 }
 
