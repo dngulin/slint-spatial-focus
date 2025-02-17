@@ -93,7 +93,7 @@ fn find_focusable_sibling_of(item: &ItemRc, ctx: &FocusMoveCtx) -> Option<ItemRc
 
     let mut siblings = Vec::new();
     let mut visitor = |i: &ItemRc| {
-        if i == item {
+        if i == item || !i.is_visible() {
             return TraversalOp::Skip;
         }
 
