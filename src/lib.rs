@@ -233,8 +233,8 @@ fn ort_distance(r: &LogicalRect, ctx: &FocusMoveCtx) -> Coord {
 }
 
 fn are_intersected(a: &(Coord, Coord), b: &(Coord, Coord)) -> bool {
-    let p1 = Coord::min(a.0, a.1) - Coord::max(b.0, b.1);
-    let p2 = Coord::max(a.0, a.1) - Coord::min(b.0, b.1);
+    let p1 = a.0 - b.1; // min(a.0, a.1) - max(b.0, b.1)
+    let p2 = a.1 - b.0; // max(a.0, a.1) - min(b.0, b.1)
     p1 < 0.0 && p2 > 0.0 // Origin is inside the Minkowski difference, so segments are intersected
 }
 
