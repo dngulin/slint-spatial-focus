@@ -170,35 +170,37 @@ fn visit_children<F: FnMut(&ItemRc) -> TraversalOp>(item: &ItemRc, process: &mut
 const TOLERANCE: Coord = 0.001;
 
 fn is_focus_target(r: &LogicalRect, ctx: &FocusMoveCtx) -> bool {
+    let f = ctx.focused_rect;
     match (ctx.axis, ctx.dir) {
         (SpatialAxis::Horizontal, SpatialDirection::Backward) => {
-            r.origin.x + r.width() - TOLERANCE <= ctx.focused_rect.origin.x
+            r.origin.x + r.width() - TOLERANCE <= f.origin.x
         }
         (SpatialAxis::Horizontal, SpatialDirection::Forward) => {
-            r.origin.x + TOLERANCE >= ctx.focused_rect.origin.x + ctx.focused_rect.width()
+            r.origin.x + TOLERANCE >= f.origin.x + f.width()
         }
         (SpatialAxis::Vertical, SpatialDirection::Backward) => {
-            r.origin.y + r.height() - TOLERANCE <= ctx.focused_rect.origin.y
+            r.origin.y + r.height() - TOLERANCE <= f.origin.y
         }
         (SpatialAxis::Vertical, SpatialDirection::Forward) => {
-            r.origin.y + TOLERANCE >= ctx.focused_rect.origin.y + ctx.focused_rect.height()
+            r.origin.y + TOLERANCE >= f.origin.y + f.height()
         }
     }
 }
 
 fn distance(r: &LogicalRect, ctx: &FocusMoveCtx) -> Coord {
+    let f = ctx.focused_rect;
     let d = match (ctx.axis, ctx.dir) {
         (SpatialAxis::Horizontal, SpatialDirection::Backward) => {
-            (r.origin.x + r.width()) - ctx.focused_rect.origin.x
+            (r.origin.x + r.width()) - f.origin.x
         }
         (SpatialAxis::Horizontal, SpatialDirection::Forward) => {
-            r.origin.x - (ctx.focused_rect.origin.x + ctx.focused_rect.width())
+            r.origin.x - (f.origin.x + f.width())
         }
         (SpatialAxis::Vertical, SpatialDirection::Backward) => {
-            (r.origin.y + r.height()) - ctx.focused_rect.origin.y
+            (r.origin.y + r.height()) - f.origin.y
         }
         (SpatialAxis::Vertical, SpatialDirection::Forward) => {
-            r.origin.y - (ctx.focused_rect.origin.y + ctx.focused_rect.height())
+            r.origin.y - (f.origin.y + f.height())
         }
     };
 
