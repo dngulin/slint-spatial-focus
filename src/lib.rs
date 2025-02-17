@@ -206,10 +206,34 @@ fn distance(r: &LogicalRect, ctx: &FocusMoveCtx) -> Coord {
 }
 
 fn ort_distance(r: &LogicalRect, ctx: &FocusMoveCtx) -> Coord {
-    match ctx.axis {
-        SpatialAxis::Horizontal => (ctx.focused_rect.origin.y - r.origin.y).abs(),
-        SpatialAxis::Vertical => (ctx.focused_rect.origin.x - r.origin.x).abs(),
+    let f = ctx.focused_rect;
+    let (a, b) = match ctx.axis {
+        SpatialAxis::Horizontal => {
+            let a = (f.origin.y, f.origin.y + f.height());
+            let b = (r.origin.y, r.origin.y + r.height());
+            (a, b)
+        }
+        SpatialAxis::Vertical => {
+            let a = (f.origin.x, f.origin.x + f.width());
+            let b = (r.origin.x, r.origin.x + r.width());
+            (a, b)
+        }
+    };
+
+    if are_intersected(&a, &b) {
+        return 0.0;
     }
+
+    let ca = a.0 + (a.1 - a.0) / 2.0;
+    let cb = b.0 + (b.1 - b.0) / 2.0;
+
+    (ca - cb).abs()
+}
+
+fn are_intersected(a: &(Coord, Coord), b: &(Coord, Coord)) -> bool {
+    let p1 = Coord::min(a.0, a.1) - Coord::max(b.0, b.1);
+    let p2 = Coord::max(a.0, a.1) - Coord::min(b.0, b.1);
+    p1 < 0.0 && p2 > 0.0 // Origin is inside the Minkowski difference, so segments are intersected
 }
 
 trait Inner {
