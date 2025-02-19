@@ -23,9 +23,8 @@ impl MoveFocus for Window {
         let focused_item = window.focus_item.try_borrow().ok()?.upgrade()?;
 
         let focus_chain = get_hierarchy_chain(&focused_item);
-        let focused_rect = get_rect(&focused_item);
 
-        let ctx = FocusMoveCtx::new(focused_rect, dir);
+        let ctx = FocusMoveCtx::new(focused_item.get_global_rect(), dir);
         let mut idx = 1;
 
         while idx < focus_chain.len() {
@@ -38,6 +37,16 @@ impl MoveFocus for Window {
         }
 
         None
+    }
+}
+
+trait Inner {
+    fn inner(&self) -> &WindowInner;
+}
+
+impl Inner for Window {
+    fn inner(&self) -> &WindowInner {
+        unsafe { std::mem::transmute(self) }
     }
 }
 
@@ -76,25 +85,70 @@ impl FocusMoveCtx {
     }
 }
 
-fn get_rect(item: &ItemRc) -> LogicalRect {
-    let local_rect = item.geometry();
-    let global_pos = item.map_to_window(local_rect.origin);
-
-    LogicalRect::new(global_pos, local_rect.size)
+enum VisitorResult {
+    Continue,
+    Skip,
+    Break,
 }
 
-fn is_focusable(item: &ItemRc) -> bool {
-    if item.downcast::<TextInput>().is_some() {
-        return true;
+trait ItemRcExt {
+    fn get_global_rect(&self) -> LogicalRect;
+    fn is_focusable(&self) -> bool;
+    fn visit_children<F: FnMut(&ItemRc) -> VisitorResult>(&self, visitor: &mut F);
+}
+
+impl ItemRcExt for ItemRc {
+    fn get_global_rect(&self) -> LogicalRect {
+        let local_rect = self.geometry();
+        let global_pos = self.map_to_window(local_rect.origin);
+
+        LogicalRect::new(global_pos, local_rect.size)
     }
 
-    if let Some(fs) = item.downcast::<FocusScope>() {
-        if fs.as_pin_ref().enabled() {
+    fn is_focusable(&self) -> bool {
+        if self.downcast::<TextInput>().is_some() {
             return true;
         }
+
+        if let Some(fs) = self.downcast::<FocusScope>() {
+            if fs.as_pin_ref().enabled() {
+                return true;
+            }
+        }
+
+        false
     }
 
-    false
+    fn visit_children<F: FnMut(&ItemRc) -> VisitorResult>(&self, visitor: &mut F) {
+        if let Some(child) = self.first_child() {
+            let op = visitor(&child);
+            match op {
+                VisitorResult::Continue => {
+                    child.visit_children(visitor);
+                }
+                VisitorResult::Skip => {}
+                VisitorResult::Break => {
+                    return;
+                }
+            }
+
+            let mut sibling = child.clone();
+            while let Some(next_sibling) = sibling.next_sibling() {
+                sibling = next_sibling;
+
+                let op = visitor(&sibling);
+                match op {
+                    VisitorResult::Continue => {
+                        sibling.visit_children(visitor);
+                    }
+                    VisitorResult::Skip => {}
+                    VisitorResult::Break => {
+                        return;
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn get_hierarchy_chain(start_item: &ItemRc) -> Vec<ItemRc> {
@@ -115,21 +169,21 @@ fn find_focusable_sibling_of(item: &ItemRc, ctx: &FocusMoveCtx) -> Option<ItemRc
     let mut siblings = Vec::new();
     let mut visitor = |i: &ItemRc| {
         if i == item || !i.is_visible() {
-            return TraversalOp::Skip;
+            return VisitorResult::Skip;
         }
 
-        if is_focusable(i) {
+        if i.is_focusable() {
             siblings.push(i.clone());
-            return TraversalOp::Skip;
+            return VisitorResult::Skip;
         }
 
-        TraversalOp::Continue
+        VisitorResult::Continue
     };
-    visit_children(&parent, &mut visitor);
+    parent.visit_children(&mut visitor);
 
     let candidates: Vec<(ItemRc, LogicalRect)> = siblings
         .iter()
-        .map(|i| (i.clone(), get_rect(i)))
+        .map(|i| (i.clone(), i.get_global_rect()))
         .filter(|(_, r)| is_focus_target(r, ctx))
         .collect();
 
@@ -156,36 +210,6 @@ fn find_focusable_sibling_of(item: &ItemRc, ctx: &FocusMoveCtx) -> Option<ItemRc
     }
 
     Some(curr_i)
-}
-
-enum TraversalOp {
-    Continue,
-    Skip,
-}
-
-fn visit_children<F: FnMut(&ItemRc) -> TraversalOp>(item: &ItemRc, process: &mut F) {
-    if let Some(child) = item.first_child() {
-        let op = process(&child);
-        match op {
-            TraversalOp::Continue => {
-                visit_children(&child, process);
-            }
-            TraversalOp::Skip => {}
-        }
-
-        let mut sibling = child.clone();
-        while let Some(next_sibling) = sibling.next_sibling() {
-            sibling = next_sibling;
-
-            let op = process(&sibling);
-            match op {
-                TraversalOp::Continue => {
-                    visit_children(&sibling, process);
-                }
-                TraversalOp::Skip => {}
-            }
-        }
-    }
 }
 
 const TOLERANCE: Coord = 0.001;
@@ -257,14 +281,4 @@ fn are_intersected(a: &(Coord, Coord), b: &(Coord, Coord)) -> bool {
     let p1 = a.0 - b.1; // min(a.0, a.1) - max(b.0, b.1)
     let p2 = a.1 - b.0; // max(a.0, a.1) - min(b.0, b.1)
     p1 < 0.0 && p2 > 0.0 // Origin is inside the Minkowski difference, so segments are intersected
-}
-
-trait Inner {
-    fn inner(&self) -> &WindowInner;
-}
-
-impl Inner for Window {
-    fn inner(&self) -> &WindowInner {
-        unsafe { std::mem::transmute(self) }
-    }
 }
