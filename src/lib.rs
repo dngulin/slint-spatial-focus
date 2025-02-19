@@ -22,7 +22,7 @@ impl MoveFocus for Window {
         let window = self.inner();
 
         let mut focus_chain_item = window.focus_item.try_borrow().ok()?.upgrade()?;
-        let ctx = FocusMoveCtx::new(focus_chain_item.get_global_rect(), dir);
+        let ctx = FocusMoveCtx::new(focus_chain_item.global_rect(), dir);
 
         while let Some(parent) = focus_chain_item.parent_item() {
             if let Some(target) = find_next_focusable_item(&parent, &focus_chain_item, &ctx) {
@@ -88,13 +88,13 @@ enum VisitorResult {
 }
 
 trait ItemRcExt {
-    fn get_global_rect(&self) -> LogicalRect;
+    fn global_rect(&self) -> LogicalRect;
     fn is_focusable(&self) -> bool;
     fn visit_children<F: FnMut(&ItemRc) -> VisitorResult>(&self, visitor: &mut F);
 }
 
 impl ItemRcExt for ItemRc {
-    fn get_global_rect(&self) -> LogicalRect {
+    fn global_rect(&self) -> LogicalRect {
         let local_rect = self.geometry();
         let global_pos = self.map_to_window(local_rect.origin);
 
@@ -169,7 +169,7 @@ fn find_next_focusable_item(
 
     let candidates: Vec<(ItemRc, LogicalRect)> = focusable_items
         .iter()
-        .map(|i| (i.clone(), i.get_global_rect()))
+        .map(|i| (i.clone(), i.global_rect()))
         .filter(|(_, r)| is_focus_target(r, ctx))
         .collect();
 
