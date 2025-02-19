@@ -1,5 +1,5 @@
 use slint::Weak;
-use slint_spatial_focus::{SpatialAxis, SpatialDirection, SpatialFocusExtensions};
+use slint_spatial_focus::{FocusMoveDirection, MoveFocus};
 
 slint::slint! {
     import { SpatialFocusHandler, SpatialFocus } from "res/spatial-focus.slint";
@@ -45,22 +45,22 @@ fn main() {
     let sf = app.global::<SpatialFocus>();
 
     let weak = app.as_weak();
-    sf.on_move_up(move || mv_focus(&weak, SpatialAxis::Vertical, SpatialDirection::Backward));
+    sf.on_move_up(move || mv_focus(&weak, FocusMoveDirection::Up));
 
     let weak = app.as_weak();
-    sf.on_move_dn(move || mv_focus(&weak, SpatialAxis::Vertical, SpatialDirection::Forward));
+    sf.on_move_dn(move || mv_focus(&weak, FocusMoveDirection::Down));
 
     let weak = app.as_weak();
-    sf.on_move_l(move || mv_focus(&weak, SpatialAxis::Horizontal, SpatialDirection::Backward));
+    sf.on_move_l(move || mv_focus(&weak, FocusMoveDirection::Left));
 
     let weak = app.as_weak();
-    sf.on_move_r(move || mv_focus(&weak, SpatialAxis::Horizontal, SpatialDirection::Forward));
+    sf.on_move_r(move || mv_focus(&weak, FocusMoveDirection::Right));
 
     app.run().unwrap();
 }
 
-fn mv_focus(weak: &Weak<App>, axis: SpatialAxis, dir: SpatialDirection) {
+fn mv_focus(weak: &Weak<App>, dir: FocusMoveDirection) {
     if let Some(app) = weak.upgrade() {
-        app.window().move_focus(axis, dir);
+        app.window().move_focus(dir);
     }
 }

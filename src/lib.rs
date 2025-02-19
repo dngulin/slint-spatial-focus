@@ -6,40 +6,26 @@ use i_slint_core::window::WindowInner;
 use i_slint_core::Coord;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum SpatialAxis {
-    Horizontal,
-    Vertical,
+pub enum FocusMoveDirection {
+    Up,
+    Right,
+    Down,
+    Left,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum SpatialDirection {
-    Forward,
-    Backward,
+pub trait MoveFocus {
+    fn move_focus(&self, dir: FocusMoveDirection) -> Option<()>;
 }
 
-struct FocusMoveCtx {
-    pub axis: SpatialAxis,
-    pub dir: SpatialDirection,
-    pub focused_rect: LogicalRect,
-}
-
-pub trait SpatialFocusExtensions {
-    fn move_focus(&self, axis: SpatialAxis, dir: SpatialDirection) -> Option<()>;
-}
-
-impl SpatialFocusExtensions for Window {
-    fn move_focus(&self, axis: SpatialAxis, dir: SpatialDirection) -> Option<()> {
+impl MoveFocus for Window {
+    fn move_focus(&self, dir: FocusMoveDirection) -> Option<()> {
         let window = self.inner();
         let focused_item = window.focus_item.try_borrow().ok()?.upgrade()?;
 
         let focus_chain = get_hierarchy_chain(&focused_item);
         let focused_rect = get_rect(&focused_item);
 
-        let ctx = FocusMoveCtx {
-            axis,
-            dir,
-            focused_rect,
-        };
+        let ctx = FocusMoveCtx::new(focused_rect, dir);
         let mut idx = 1;
 
         while idx < focus_chain.len() {
@@ -52,6 +38,41 @@ impl SpatialFocusExtensions for Window {
         }
 
         None
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum SpatialAxis {
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum SpatialDirection {
+    Forward,
+    Backward,
+}
+
+struct FocusMoveCtx {
+    pub axis: SpatialAxis,
+    pub dir: SpatialDirection,
+    pub focused_rect: LogicalRect,
+}
+
+impl FocusMoveCtx {
+    pub fn new(focused_rect: LogicalRect, move_dir: FocusMoveDirection) -> Self {
+        let (axis, dir) = match move_dir {
+            FocusMoveDirection::Up => (SpatialAxis::Vertical, SpatialDirection::Backward),
+            FocusMoveDirection::Right => (SpatialAxis::Horizontal, SpatialDirection::Forward),
+            FocusMoveDirection::Down => (SpatialAxis::Vertical, SpatialDirection::Forward),
+            FocusMoveDirection::Left => (SpatialAxis::Horizontal, SpatialDirection::Backward),
+        };
+
+        FocusMoveCtx {
+            axis,
+            dir,
+            focused_rect,
+        }
     }
 }
 
