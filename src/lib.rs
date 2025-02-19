@@ -20,20 +20,16 @@ pub trait MoveFocus {
 impl MoveFocus for Window {
     fn move_focus(&self, dir: FocusMoveDirection) -> Option<()> {
         let window = self.inner();
-        let focused_item = window.focus_item.try_borrow().ok()?.upgrade()?;
 
-        let focus_chain = get_hierarchy_chain(&focused_item);
+        let mut focus_chain_item = window.focus_item.try_borrow().ok()?.upgrade()?;
+        let ctx = FocusMoveCtx::new(focus_chain_item.get_global_rect(), dir);
 
-        let ctx = FocusMoveCtx::new(focused_item.get_global_rect(), dir);
-        let mut idx = 1;
-
-        while idx < focus_chain.len() {
-            let item = &focus_chain[idx - 1];
-            if let Some(focus_target) = find_focusable_sibling_of(item, &ctx) {
-                window.set_focus_item(&focus_target, true);
+        while let Some(parent) = focus_chain_item.parent_item() {
+            if let Some(target) = find_next_focusable_item(&parent, &focus_chain_item, &ctx) {
+                window.set_focus_item(&target, true);
                 return Some(());
             }
-            idx += 1;
+            focus_chain_item = parent;
         }
 
         None
@@ -151,29 +147,19 @@ impl ItemRcExt for ItemRc {
     }
 }
 
-fn get_hierarchy_chain(start_item: &ItemRc) -> Vec<ItemRc> {
-    let mut item = start_item.clone();
-    let mut chain = vec![item.clone()];
-
-    while let Some(parent) = item.parent_item() {
-        item = parent;
-        chain.push(item.clone());
-    }
-
-    chain
-}
-
-fn find_focusable_sibling_of(item: &ItemRc, ctx: &FocusMoveCtx) -> Option<ItemRc> {
-    let parent = item.parent_item()?;
-
-    let mut siblings = Vec::new();
-    let mut visitor = |i: &ItemRc| {
-        if i == item || !i.is_visible() {
+fn find_next_focusable_item(
+    parent: &ItemRc,
+    focus_chain_child: &ItemRc,
+    ctx: &FocusMoveCtx,
+) -> Option<ItemRc> {
+    let mut focusable_items = Vec::new();
+    let mut visitor = |item: &ItemRc| {
+        if item == focus_chain_child || !item.is_visible() {
             return VisitorResult::Skip;
         }
 
-        if i.is_focusable() {
-            siblings.push(i.clone());
+        if item.is_focusable() {
+            focusable_items.push(item.clone());
             return VisitorResult::Skip;
         }
 
@@ -181,7 +167,7 @@ fn find_focusable_sibling_of(item: &ItemRc, ctx: &FocusMoveCtx) -> Option<ItemRc
     };
     parent.visit_children(&mut visitor);
 
-    let candidates: Vec<(ItemRc, LogicalRect)> = siblings
+    let candidates: Vec<(ItemRc, LogicalRect)> = focusable_items
         .iter()
         .map(|i| (i.clone(), i.get_global_rect()))
         .filter(|(_, r)| is_focus_target(r, ctx))
