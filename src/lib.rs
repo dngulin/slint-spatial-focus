@@ -84,7 +84,6 @@ impl FocusMoveCtx {
 enum VisitorResult {
     Continue,
     Skip,
-    Break,
 }
 
 trait ItemRcExt {
@@ -123,9 +122,6 @@ impl ItemRcExt for ItemRc {
                     child.visit_children(visitor);
                 }
                 VisitorResult::Skip => {}
-                VisitorResult::Break => {
-                    return;
-                }
             }
 
             let mut sibling = child.clone();
@@ -138,9 +134,6 @@ impl ItemRcExt for ItemRc {
                         sibling.visit_children(visitor);
                     }
                     VisitorResult::Skip => {}
-                    VisitorResult::Break => {
-                        return;
-                    }
                 }
             }
         }
