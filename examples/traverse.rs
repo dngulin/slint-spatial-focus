@@ -1,6 +1,3 @@
-use slint::Weak;
-use slint_spatial_focus::{FocusMoveDirection, MoveFocus};
-
 slint::slint! {
     import { SpatialFocusHandler, SpatialFocus } from "res/spatial-focus.slint";
     export { SpatialFocus }
@@ -41,26 +38,6 @@ slint::slint! {
 
 fn main() {
     let app = App::new().unwrap();
-
-    let sf = app.global::<SpatialFocus>();
-
-    let weak = app.as_weak();
-    sf.on_move_up(move || mv_focus(&weak, FocusMoveDirection::Up));
-
-    let weak = app.as_weak();
-    sf.on_move_dn(move || mv_focus(&weak, FocusMoveDirection::Down));
-
-    let weak = app.as_weak();
-    sf.on_move_l(move || mv_focus(&weak, FocusMoveDirection::Left));
-
-    let weak = app.as_weak();
-    sf.on_move_r(move || mv_focus(&weak, FocusMoveDirection::Right));
-
+    slint_spatial_focus::init!(&app);
     app.run().unwrap();
-}
-
-fn mv_focus(weak: &Weak<App>, dir: FocusMoveDirection) {
-    if let Some(app) = weak.upgrade() {
-        app.window().move_focus(dir);
-    }
 }

@@ -193,3 +193,41 @@ fn are_intersected(a: &(Coord, Coord), b: &(Coord, Coord)) -> bool {
     let p2 = a.1 - b.0; // max(a.0, a.1) - min(b.0, b.1)
     p1 < 0.0 && p2 > 0.0 // Origin is inside the Minkowski difference, so segments are intersected
 }
+
+#[macro_export]
+macro_rules! init {
+    ($app:expr) => {{
+        use slint_spatial_focus::{FocusMoveDirection, MoveFocus};
+
+        let app = $app;
+        let sf = app.global::<SpatialFocus>();
+
+        let weak = app.as_weak();
+        sf.on_move_up(move || {
+            if let Some(app) = weak.upgrade() {
+                app.window().move_focus(FocusMoveDirection::Up);
+            }
+        });
+
+        let weak = app.as_weak();
+        sf.on_move_dn(move || {
+            if let Some(app) = weak.upgrade() {
+                app.window().move_focus(FocusMoveDirection::Down);
+            }
+        });
+
+        let weak = app.as_weak();
+        sf.on_move_l(move || {
+            if let Some(app) = weak.upgrade() {
+                app.window().move_focus(FocusMoveDirection::Left);
+            }
+        });
+
+        let weak = app.as_weak();
+        sf.on_move_r(move || {
+            if let Some(app) = weak.upgrade() {
+                app.window().move_focus(FocusMoveDirection::Right);
+            }
+        });
+    }};
+}
