@@ -81,6 +81,7 @@ impl FocusMoveCtx {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum VisitorResult {
     Continue,
     Skip,
@@ -115,27 +116,36 @@ impl ItemRcExt for ItemRc {
     }
 
     fn visit_children<F: FnMut(&ItemRc) -> VisitorResult>(&self, visitor: &mut F) {
+        let mut visited = Vec::new();
+
         if let Some(child) = self.first_child() {
-            let op = visitor(&child);
-            match op {
-                VisitorResult::Continue => {
-                    child.visit_children(visitor);
-                }
-                VisitorResult::Skip => {}
-            }
+            visit_depth(child, visitor, &mut visited);
 
-            let mut sibling = child.clone();
-            while let Some(next_sibling) = sibling.next_sibling() {
-                sibling = next_sibling;
-
-                let op = visitor(&sibling);
-                match op {
-                    VisitorResult::Continue => {
-                        sibling.visit_children(visitor);
-                    }
-                    VisitorResult::Skip => {}
+            while let Some(visited_item) = visited.pop() {
+                if let Some(sibling) = visited_item.next_sibling() {
+                    visit_depth(sibling, visitor, &mut visited);
                 }
             }
+        }
+    }
+}
+
+fn visit_depth<F: FnMut(&ItemRc) -> VisitorResult>(
+    mut item: ItemRc,
+    visitor: &mut F,
+    visited: &mut Vec<ItemRc>,
+) {
+    let mut visit_result = visitor(&item);
+    visited.push(item.clone());
+
+    while visit_result == VisitorResult::Continue {
+        if let Some(next_child) = item.first_child() {
+            item = next_child;
+
+            visit_result = visitor(&item);
+            visited.push(item.clone());
+        } else {
+            break;
         }
     }
 }
