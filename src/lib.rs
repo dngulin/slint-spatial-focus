@@ -15,6 +15,8 @@ pub enum FocusMoveDirection {
 }
 
 pub trait MoveFocus {
+    /// Tries to move focus in a specified direction.s
+    /// Returns `Some(())` on success or `None` if the next item to focus is not found.
     fn move_focus(&self, dir: FocusMoveDirection) -> Option<()>;
 }
 
@@ -194,6 +196,7 @@ fn are_intersected(a: &(Coord, Coord), b: &(Coord, Coord)) -> bool {
     p1 < 0.0 && p2 > 0.0 // Origin is inside the Minkowski difference, so segments are intersected
 }
 
+/// Initializes `on_move` callbacks of the global `SpatialFocus` object.
 #[macro_export]
 macro_rules! init {
     ($app:expr) => {{
