@@ -1,8 +1,19 @@
-# Slint Spatial Navigation Prototype
+# Arrow Key Navigation For Slint UI
 
-This is the prototype library for spatial navigation in Slint UI.
-It provides the `SpatialFocusHandler` component
-that can be used as root window element to catch spatial navigation events.
+This library adds spatial navigation to Slint applications.
 
-It is also required to initialize callbacks of the `SpatialFocus` global object.
-For details see the [focus traverse example](examples/traverse.rs).
+How to use it:
+
+- Use the `SpatialFocusHandler` as a root item in your window
+- Export the `SpatialFocus` global object
+- Call the `slint_spatial_focus::init!` macro to initialize the library
+
+For details see the [example](examples/traverse.rs).
+
+## Limitations
+
+- The library depends on the `i-slint-core`
+  and should be used with the specific Slint version (`1.9.2` for now).
+- Focus traversal algorithm searches enabled `FocusScope` and `TextInput` objects.
+  So, it misses all native controls.
+- Only float point `Coord` representation is supported
