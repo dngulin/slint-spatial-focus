@@ -1,7 +1,14 @@
 [package]
 name = "slint-spatial-focus"
-version = "0.1.0"
+version = "1.9.2-1.0.0"
+authors = ["Danil Gulin <d.nk.gulin@gmail.com>"]
 edition = "2021"
+description = "Adds arrow key navigation to Slint UI"
+repository = "https://github.com/dngulin/slint-spatial-focus"
+license = "MIT"
+readme = "README.md"
+keywords = ["slint"]
+categories = ["gui"]
 
 [dependencies]
 slint = "=1.9.2"
