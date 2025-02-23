@@ -35,14 +35,12 @@ impl ItemRcExt for ItemRc {
     }
 
     fn is_focusable(&self) -> bool {
-        if self.downcast::<TextInput>().is_some() {
-            return true;
+        if let Some(ti) = self.downcast::<TextInput>() {
+            return ti.as_pin_ref().enabled();
         }
 
         if let Some(fs) = self.downcast::<FocusScope>() {
-            if fs.as_pin_ref().enabled() {
-                return true;
-            }
+            return fs.as_pin_ref().enabled();
         }
 
         false
